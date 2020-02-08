@@ -2,16 +2,18 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np 
 import os
+from statistics import mean
 from scipy import optimize
 import math
+import sys
 
 # Get data for plotting from files
-
+folderNum = str(sys.argv[1])
 dirNameCD = './ResultsCD'
 dirNameFPS = './ResultsFPS'
 dirNameIOU = './ResultsIOU'
 dirNameDataset = './Dataset'
-dirNameBB = './TrackerBoundingBoxes'
+dirNameBB = './TrackerBoundingBoxesScaled/' + folderNum
 pathToDSFolder = os.listdir(dirNameDataset)
 pathToDSFolder.sort()
 pathToCalculatedBBFolder = os.listdir(dirNameBB)
@@ -69,37 +71,37 @@ def getDataFromTxtFile(boundingBoxFile):
     return groundTruth
 
 def addToSum(row1, row2):
-    return intersection_over_union((int(row1[0]),int(row1[1]),int(row1[0])+int(row1[2]),int(row1[1])+int(row1[3])), 
+    return center_distance((int(row1[0]),int(row1[1]),int(row1[0])+int(row1[2]),int(row1[1])+int(row1[3])), 
                                    (int(row2[0]),int(row2[1]),int(row2[0])+int(row2[2]),int(row2[1])+int(row2[3])))
 
 def plotDataOnGraph(arrayToPlot, arrayOfAverages, className = None, classLength = None):
-    x = np.arange(0, 1.1, 0.2)
+    x = np.arange(0, 51, 10)
     y = []
     for i in arrayToPlot: 
         y.append(i)
     # normalize values from 0 to 1
     for i in range(len(y)):
-        divisor = y[i][0]
+        divisor = y[i][-1]
         for j in range(len(y[i])):
-            y[i][j] /= divisor
-
+            y[i][j] /= divisor * 1.
+    #print("Y = " + str(y))
     # remove empty space in plot
-    plt.xlim(0)
-    plt.ylim(0)
+    #plt.xlim()
+    #plt.ylim(0)
 
     # add labels 
-    plt.xlabel('Overlap threshold')
-    plt.ylabel('Success rate')
+    plt.xlabel('Location error threshold')
+    plt.ylabel('Precision')
     if (className == None):
-        plt.title('Success plots of OPE')
+        plt.title('Precision plot of SRE')
     else:
-        plt.title('Success plots of OPE - ' + className + ' (' + str(classLength) + ')')
+        plt.title('Precision plot of SRE - ' + className + ' (' + str(classLength) + ')')
     # plot each tracker
     color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
     for i in range(len(trackerList)): 
-        plt.plot(x, y[i], color[i], label=(trackerList[i] + ' [' + str(round(arrayOfAverages[i], 3)) + ']'))
+        plt.plot(x, y[i], color[i], label=(trackerList[i] + ' [' + str(round(mean(y[i]), 3)) + ']'))
     plt.legend()
-    plt.savefig('./Plots/OPESuccessPlots.eps', format='eps')
+    #plt.savefig('./Plots/SREPlots/SREPrecisionPlot' + folderNum + '.eps', format='eps')
     plt.show()
 
 IOUAverage = [[],[],[],[],[],[],[]]
@@ -201,7 +203,6 @@ for x in pathToDSFolder:
     mosseFile.close()
     tldFile.close()
     
-print(len(IOUAverage))
 # compute average IOU for each tracker
 averagesForAllVideos = [0,0,0,0,0,0,0]
 for i in range(len(trackerList)):
@@ -209,14 +210,15 @@ for i in range(len(trackerList)):
     averagesForAllVideos[i] = ans / len(IOUAverage[i])
 
 # find Success Plot Rate for each tracker
+#print(averagesForAllVideos)
 
 plottingList = []
-for thresh in np.arange(0, 1.01, 0.2): 
+for thresh in np.arange(0, 51, 10): 
     threshold = round(thresh, 1)
     for x in IOU: 
         brojac = 0
         for y in x: 
-            if (y >= threshold): 
+            if (y <= threshold): 
                 brojac += 1
         plottingList.append(brojac)
 
@@ -226,6 +228,7 @@ for i in range(7):
         #print(plottingList[j * 7 + i])
         plotList[i].append(plottingList[j * 7 + i])
     
-#print (str(plotList))
+print (str(plotList))
+#plotDataOnGraph(plotList, averagesForAllVideos)#, className=namesOfClasses[IndexOfClass], classLength=classLengthCounter)
 
-plotDataOnGraph(plotList, averagesForAllVideos) #className=namesOfClasses[IndexOfClass], classLength=classLengthCounter)
+#python3 plotResults.py 1 ; python3 plotResults.py 2 ; python3 plotResults.py 3 ; python3 plotResults.py 4 ; python3 plotResults.py 6 ; python3 plotResults.py 7 ; python3 plotResults.py 8 
